@@ -2,7 +2,7 @@ MusicEngine
 ===========
 
 **概要:**  
-ADX2LEを使わない場合は、https://github.com/geekdrums/MusicEngine の方をご利用ください。
+ADX2LEを使わない場合は、https://github.com/geekdrums/MusicEngine の方をご利用ください。  
 Unity&ADX2LEを使って音楽を再生するオブジェクトにMusicコンポーネントを追加してテンポや拍子を指定する事で  
 音楽のタイミングを取得したりクオンタイズさせたり  
 音楽に合わせた演出を簡単に作れるようになります。  
