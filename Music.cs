@@ -447,7 +447,7 @@ public class Music : MonoBehaviour
 	void Awake()
     {
         MusicList.Add( this );
-        if( Current == null )
+        if( Current == null || MusicSource.source.playOnStart )
         {
             Current = this;
         }
