@@ -258,6 +258,11 @@ public class Music : MonoBehaviour
     {
         return Current.IsNowChangedAt_( t.bar, t.beat, t.unit );
     }
+
+    public static float MusicalTimeFrom( Timing timing )
+    {
+        return (Now - timing) + (float)lagUnit;
+    }
     #endregion
 
     #region public static functions
