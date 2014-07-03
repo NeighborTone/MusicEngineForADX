@@ -452,11 +452,11 @@ public class Music : MonoBehaviour
 	void Awake()
 	{
 		MusicList.Add( this );
-		if( Current == null || MusicSource.source.playOnStart )
-		{
-			Current = this;
-		}
-		MusicSource = new SoundCue( GetComponent<CriAtomSource>() );
+        MusicSource = new SoundCue( GetComponent<CriAtomSource>() );
+        if( Current == null || MusicSource.source.playOnStart )
+        {
+            Current = this;
+        }
 		ACBData = CriAtom.GetAcb( MusicSource.source.cueSheet );
 		ACBData.GetCueInfo( MusicSource.source.cueName, out CueInfo );
 
