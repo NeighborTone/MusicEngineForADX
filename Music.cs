@@ -132,7 +132,7 @@ public class Music : MonoBehaviour
 	/// <summary>
 	/// put your debug TextMesh to see current musical time & block info.
 	/// </summary>
-	//public TextMesh DebugText;
+	public TextMesh DebugText;
 	#endregion
 
 	static Music Current_;
@@ -609,16 +609,14 @@ public class Music : MonoBehaviour
 			oldJust_.Copy(just_);
 		}
 
-		/* DebugUpdateText
 		if( DebugText != null )
 		{
-			DebugText.text = "Just = " + Just_.ToString() + ", MusicalTime = " + MusicalTime_;
+			DebugText.text = "Just = " + Just.ToString() + ", MusicalTime = " + MusicalTime_;
 			if( BlockInfos.Count > 0 )
 			{
-				DebugText.text += System.Environment.NewLine + "block[" + CurrentBlockIndex_ + "] = " + CurrentBlock_.BlockName + "(" + NumBlockBar_ + "bar)";
+				DebugText.text += System.Environment.NewLine + "block[" + currentBlockIndex_ + "] = " + CurrentBlock_.BlockName + "(" + numBlockBar_ + "bar)";
 			}
 		}
-		*/
 	}
 
 	#endregion
