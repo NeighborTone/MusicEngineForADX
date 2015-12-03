@@ -84,7 +84,7 @@ like this
 
 Preparation:
 - Create a CriAtomSource object with Music component,
-- specify mtBeat, mtBar and Tempo,
+- specify UnitPerBeat, UnitPerBar and Tempo,
 - name it with same name of CueName,
 - then open CRI Atom window and push "Update Assets of CRI Atom Craft" button,
 - your BlockInfo will be automatically updated.
@@ -138,6 +138,7 @@ public class Music : MonoBehaviour
 	static Music Current_;
 	static List<Music> MusicList = new List<Music>();
 	static readonly int SamplingRate = 44100;
+	static event EventHandler OnNextBlockStarted;
 
 	#region public static properties
 	public static bool IsPlaying { get { return Current_.IsPlaying_; } }
@@ -172,15 +173,15 @@ public class Music : MonoBehaviour
 	/// <summary>
 	/// returns how long from nearest Just timing with sign.
 	/// </summary>
-	public static double lLg{ get{ return Current_.Lag_; } }
+	public static double lLg { get { return Current_.Lag_; } }
 	/// <summary>
 	/// returns how long from nearest Just timing absolutely.
 	/// </summary>
-	public static double LagAbs{ get{ return Current_.LagAbs_; } }
+	public static double LagAbs { get { return Current_.LagAbs_; } }
 	/// <summary>
 	/// returns normalized lag.
 	/// </summary>
-	public static double LagUnit{ get{ return Current_.LagUnit_; } }
+	public static double LagUnit { get { return Current_.LagUnit_; } }
 	/// <summary>
 	/// sec / musicalUnit
 	/// </summary>
@@ -189,6 +190,10 @@ public class Music : MonoBehaviour
 	/// current musical time based on MusicalTimeUnit
 	/// </summary>
 	public static float MusicalTime { get { return Current_.MusicalTime_; } }
+	/// <summary>
+	/// current musical time based on MusicalTimeUnit
+	/// </summary>
+	public static float MusicalTimeBar { get { return Current_.MusicalTimeBar_; } }
 	/// <summary>
 	/// dif from timing to now on musical time unit.
 	/// </summary>
@@ -217,6 +222,7 @@ public class Music : MonoBehaviour
 
 	public static int CurrentUnitPerBar { get { return Current_.UnitPerBar; } }
 	public static int CurrentUnitPerBeat { get { return Current_.UnitPerBeat; } }
+	public static double CurrentTempo { get { return Current_.Tempo; } }
 	public static string CurrentMusicName { get { return Current_.name; } }
 	public static string CurrentBlockName { get { return Current_.CurrentBlock_.BlockName; } }
 	public static string NextBlockName { get { return Current_.NextBlock_.BlockName; } }
@@ -226,9 +232,9 @@ public class Music : MonoBehaviour
 	#endregion
 
 	#region public static predicates
-	public static bool IsJustChangedWhen( Predicate<Timing> pred )
+	public static bool IsJustChangedWhen(Predicate<Timing> pred)
 	{
-		return Current_.IsJustChangedWhen_( pred );
+		return Current_.IsJustChangedWhen_(pred);
 	}
 	public static bool IsJustChangedBar()
 	{
@@ -238,18 +244,18 @@ public class Music : MonoBehaviour
 	{
 		return Current_.IsJustChangedBeat_();
 	}
-	public static bool IsJustChangedAt( int bar = 0, int beat = 0, int unit = 0 )
+	public static bool IsJustChangedAt(int bar = 0, int beat = 0, int unit = 0)
 	{
-		return Current_.IsJustChangedAt_( bar, beat, unit );
+		return Current_.IsJustChangedAt_(bar, beat, unit);
 	}
-	public static bool IsJustChangedAt( Timing t )
+	public static bool IsJustChangedAt(Timing t)
 	{
-		return Current_.IsJustChangedAt_( t.Bar, t.Beat, t.Unit );
+		return Current_.IsJustChangedAt_(t.Bar, t.Beat, t.Unit);
 	}
 
-	public static bool IsNearChangedWhen( Predicate<Timing> pred )
+	public static bool IsNearChangedWhen(Predicate<Timing> pred)
 	{
-		return Current_.IsNearChangedWhen_( pred );
+		return Current_.IsNearChangedWhen_(pred);
 	}
 	public static bool IsNearChangedBar()
 	{
@@ -259,13 +265,13 @@ public class Music : MonoBehaviour
 	{
 		return Current_.IsNearChangedBeat_();
 	}
-	public static bool IsNearChangedAt( int bar, int beat = 0, int unit = 0 )
+	public static bool IsNearChangedAt(int bar, int beat = 0, int unit = 0)
 	{
-		return Current_.IsNearChangedAt_( bar, beat, unit );
+		return Current_.IsNearChangedAt_(bar, beat, unit);
 	}
-	public static bool IsNearChangedAt( Timing t )
+	public static bool IsNearChangedAt(Timing t)
 	{
-		return Current_.IsNearChangedAt_( t.Bar, t.Beat, t.Unit );
+		return Current_.IsNearChangedAt_(t.Bar, t.Beat, t.Unit);
 	}
 	#endregion
 
@@ -274,7 +280,18 @@ public class Music : MonoBehaviour
 	/// Change Current Music.
 	/// </summary>
 	/// <param name="MusicName">name of the GameObject that include Music</param>
-	public static void Play( string MusicName, string firstBlockName = "" ) { MusicList.Find( ( Music m ) => m.name == MusicName ).PlayStart( firstBlockName ); }
+	public static void Play(string MusicName, string firstBlockName = "")
+	{
+		Music music = MusicList.Find((Music m) => m != null && m.name == MusicName);
+		if( music != null )
+		{
+			music.PlayStart(firstBlockName);
+		}
+		else
+		{
+			Debug.Log("Can't find music: " + MusicName);
+		}
+	}
 	/// <summary>
 	/// Quantize to musical time( default is 16 beat ).
 	/// </summary>
@@ -300,68 +317,77 @@ public class Music : MonoBehaviour
 	}
 
 	//adx2 functions
-	public static void SetNextBlock( string blockName )
+	public static void SetNextBlock(string blockName, EventHandler onNextBlockStarted = null)
 	{
 		if( blockName == CurrentBlockName ) return;
-		Debug.Log( "SetNextBlock : " + blockName );
-		int index = Current_.BlockInfos.FindIndex( ( BlockInfo info ) => info.BlockName == blockName );
+		Debug.Log("SetNextBlock : " + blockName);
+		int index = Current_.BlockInfos.FindIndex((BlockInfo info) => info.BlockName == blockName);
 		if( index >= 0 )
 		{
 			Current_.nextBlockIndex_ = index;
-			Current_.playback_.SetNextBlockIndex( index );
+			Current_.playback_.SetNextBlockIndex(index);
+			OnNextBlockStarted = null;
+			if( onNextBlockStarted != null )
+				OnNextBlockStarted += onNextBlockStarted;
 		}
 		else
 		{
-			Debug.LogError( "Error!! Music.SetNextBlock Can't find block name: " + blockName );
+			Debug.LogError("Error!! Music.SetNextBlock Can't find block name: " + blockName);
 		}
 	}
-	public static void SetNextBlock( int index )
+	public static void SetNextBlock(int index, EventHandler onNextBlockStarted = null)
 	{
 		if( index == Current_.currentBlockIndex_ ) return;
 		if( index < Current_.cueInfo_.numBlocks )
 		{
 			Current_.nextBlockIndex_ = index;
-			Current_.playback_.SetNextBlockIndex( index );
+			Current_.playback_.SetNextBlockIndex(index);
+			if( onNextBlockStarted != null )
+				OnNextBlockStarted += onNextBlockStarted;
 		}
 		else
 		{
-			Debug.LogError( "Error!! Music.SetNextBlock index is out of range: " + index );
+			Debug.LogError("Error!! Music.SetNextBlock index is out of range: " + index);
 		}
 	}
-	public static void SetFirstBlock( string blockName )
+	public static void SetFirstBlock(string blockName)
 	{
-		int index = Current_.BlockInfos.FindIndex( ( BlockInfo info ) => info.BlockName == blockName );
+		int index = Current_.BlockInfos.FindIndex((BlockInfo info) => info.BlockName == blockName);
 		if( index >= 0 )
 		{
 			Current_.nextBlockIndex_ = index;
 			Current_.currentBlockIndex_ = index;
-			Current_.musicSource_.Player.SetFirstBlockIndex( index );
+			Current_.musicSource_.Player.SetFirstBlockIndex(index);
 		}
 		else
 		{
-			Debug.LogError( "Error!! Music.SetFirstBlock Can't find block name: " + blockName );
+			Debug.LogError("Error!! Music.SetFirstBlock Can't find block name: " + blockName);
 		}
 	}
-	public static void SetFirstBlock( int index )
+	public static void SetFirstBlock(int index)
 	{
 		if( index < Current_.cueInfo_.numBlocks )
 		{
 			Current_.nextBlockIndex_ = index;
 			Current_.currentBlockIndex_ = index;
-			Current_.musicSource_.Player.SetFirstBlockIndex( index );
+			Current_.musicSource_.Player.SetFirstBlockIndex(index);
 		}
 		else
 		{
-			Debug.LogError( "Error!! Music.SetFirstBlock index is out of range: " + index );
+			Debug.LogError("Error!! Music.SetFirstBlock index is out of range: " + index);
 		}
 	}
-	public static void SetAisac( uint index, float value )
+	public static void SetAisac(uint index, float value)
 	{
-		Current_.musicSource_.SetAisac( index, value );
+		Current_.musicSource_.SetAisac(index, value);
 	}
-	public static void SetAisac( string controlName, float value )
+	public static void SetAisac(string controlName, float value)
 	{
-		Current_.musicSource_.SetAisac( controlName, value );
+		Current_.musicSource_.SetAisac(controlName, value);
+	}
+	public static void SetGameVariable(string variableName, float value)
+	{
+		CriAtomEx.SetGameVariable(variableName, value);
 	}
 	#endregion
 
@@ -427,9 +453,9 @@ public class Music : MonoBehaviour
 	#endregion
 
 	#region private predicates
-	private bool IsNearChangedWhen_( Predicate<Timing> pred )
+	private bool IsNearChangedWhen_(Predicate<Timing> pred)
 	{
-		return isNearChanged_ && pred( near_ );
+		return isNearChanged_ && pred(near_);
 	}
 	private bool IsNearChangedBar_()
 	{
@@ -439,14 +465,14 @@ public class Music : MonoBehaviour
 	{
 		return isNearChanged_ && near_.Unit == 0;
 	}
-	private bool IsNearChangedAt_( int bar, int beat = 0, int unit = 0 )
+	private bool IsNearChangedAt_(int bar, int beat = 0, int unit = 0)
 	{
 		return isNearChanged_ &&
 			near_.Bar == bar && near_.Beat == beat && near_.Unit == unit;
 	}
-	private bool IsJustChangedWhen_( Predicate<Timing> pred )
+	private bool IsJustChangedWhen_(Predicate<Timing> pred)
 	{
-		return isJustChanged_ && pred( just_ );
+		return isJustChanged_ && pred(just_);
 	}
 	private bool IsJustChangedBar_()
 	{
@@ -456,7 +482,7 @@ public class Music : MonoBehaviour
 	{
 		return isJustChanged_ && just_.Unit == 0;
 	}
-	private bool IsJustChangedAt_( int bar = 0, int beat = 0, int unit = 0 )
+	private bool IsJustChangedAt_(int bar = 0, int beat = 0, int unit = 0)
 	{
 		return isJustChanged_ &&
 			just_.Bar == bar && just_.Beat == beat && just_.Unit == unit;
@@ -466,16 +492,19 @@ public class Music : MonoBehaviour
 	#region Initialize & Update
 	void Awake()
 	{
-		MusicList.Add( this );
-        musicSource_ = GetComponent<CriAtomSource>();
-		if( Current_ == null && musicSource_.playOnStart )
-        {
-			musicSource_.playOnStart = false;
-			playOnStart_ = true;
+		MusicList.Add(this);
+		musicSource_ = GetComponent<CriAtomSource>();
+		if( Current_ == null || musicSource_.playOnStart )
+		{
+			if( musicSource_.playOnStart )
+			{
+				musicSource_.playOnStart = false;
+				playOnStart_ = true;
+			}
 			Current_ = this;
-        }
-		acbData_ = CriAtom.GetAcb( musicSource_.cueSheet );
-		acbData_.GetCueInfo( musicSource_.cueName, out cueInfo_ );
+		}
+		acbData_ = CriAtom.GetAcb(musicSource_.cueSheet);
+		acbData_.GetCueInfo(musicSource_.cueName, out cueInfo_);
 
 		double beatSec = (60.0 / Tempo);
 		samplesPerUnit_ = (int)(SamplingRate * (beatSec/UnitPerBeat));
@@ -490,10 +519,10 @@ public class Music : MonoBehaviour
 	{
 		isJustChanged_ = false;
 		isNearChanged_ = false;
-		near_ = new Timing( 0, 0, -1 );
-		just_ = new Timing( near_ );
-		oldNear_ = new Timing( near_ );
-		oldJust_ = new Timing( just_ );
+		near_ = new Timing(0, 0, -1);
+		just_ = new Timing(near_);
+		oldNear_ = new Timing(near_);
+		oldJust_ = new Timing(just_);
 		timeSecFromJust_ = 0;
 		isFormerHalf_ = true;
 		numRepeat_ = 0;
@@ -503,9 +532,9 @@ public class Music : MonoBehaviour
 		currentSample_ = 0;
 	}
 
-	void PlayStart( string firstBlockName = "" )
+	void PlayStart(string firstBlockName = "")
 	{
-		if ( Current_ != null && IsPlaying )
+		if( Current_ != null && IsPlaying )
 		{
 			Stop();
 		}
@@ -513,9 +542,9 @@ public class Music : MonoBehaviour
 		Current_ = this;
 		Initialize();
 
-		if ( firstBlockName != "" )
+		if( firstBlockName != "" )
 		{
-			SetFirstBlock( firstBlockName );
+			SetFirstBlock(firstBlockName);
 		}
 		playback_ = musicSource_.Play();
 		numBlockBar_ = BlockInfos[currentBlockIndex_].NumBar;
@@ -541,7 +570,7 @@ public class Music : MonoBehaviour
 			UpdateTiming();
 		}
 	}
-	
+
 #if UNITY_EDITOR
 	void OnPlaymodeStateChanged()
 	{
@@ -561,10 +590,9 @@ public class Music : MonoBehaviour
 
 	void UpdateTiming()
 	{
-		int oldSample = currentSample_;
 		long numSamples;
 		int tempOut;
-		if ( !playback_.GetNumPlayedSamples( out numSamples, out tempOut ) )
+		if( !playback_.GetNumPlayedSamples(out numSamples, out tempOut) )
 		{
 			numSamples = -1;
 		}
@@ -573,15 +601,10 @@ public class Music : MonoBehaviour
 		currentSample_ = (int)numSamples;
 		if( currentSample_ >= 0 )
 		{
-			//BlockChanged
-			if( currentSample_ < oldSample )
-			{
-				numBlockBar_ = BlockInfos[playback_.GetCurrentBlockIndex()].NumBar;
-			}
-
 			just_.Bar = (int)(currentSample_ / samplesPerBar_);
 			just_.Beat = (int)((currentSample_ - just_.Bar * samplesPerBar_) / samplesPerBeat_);
 			just_.Unit = (int)((currentSample_ - just_.Bar * samplesPerBar_ - just_.Beat * samplesPerBeat_) / samplesPerUnit_);
+			just_.Fix();
 			if( numBlockBar_ > 0 )
 			{
 				while( just_.Bar >= numBlockBar_ )
@@ -630,6 +653,7 @@ public class Music : MonoBehaviour
 		if( isJustChanged_ && just_ < oldJust_ )
 		{
 			currentBlockIndex_ = playback_.GetCurrentBlockIndex();
+			numBlockBar_ = BlockInfos[currentBlockIndex_].NumBar;
 			if( oldBlockIndex_ == currentBlockIndex_ )
 			{
 				OnBlockRepeated();
@@ -645,7 +669,7 @@ public class Music : MonoBehaviour
 	//On events (when isJustChanged)
 	void OnJustChanged()
 	{
-		foreach ( CriAtomSource cue in quantizedCue_ )
+		foreach( CriAtomSource cue in quantizedCue_ )
 		{
 			cue.Play();
 		}
@@ -668,6 +692,12 @@ public class Music : MonoBehaviour
 	void OnBlockChanged()
 	{
 		numRepeat_ = 0;
+		Debug.Log("Music::OnBlockChanged " + CurrentBlockName);
+		if( OnNextBlockStarted != null )
+		{
+			OnNextBlockStarted(null, null);
+			OnNextBlockStarted = null;
+		}
 	}
 	#endregion
 }
@@ -694,7 +724,7 @@ public class Timing : IComparable<Timing>, IEquatable<Timing>
 		Beat = copy.Beat;
 		Unit = copy.Unit;
 	}
-	
+
 	public int Bar, Beat, Unit;
 
 	public int MusicalTime { get { return Bar * Music.CurrentUnitPerBar + Beat * Music.CurrentUnitPerBeat + Unit; } }
@@ -789,4 +819,3 @@ public class Timing : IComparable<Timing>, IEquatable<Timing>
 		return Bar + " " + Beat + " " + Unit;
 	}
 }
-
