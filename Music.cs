@@ -379,11 +379,11 @@ public class Music : MonoBehaviour
 	}
 	public static void SetAisac(uint index, float value)
 	{
-		Current_.musicSource_.SetAisac(index, value);
+		Current_.musicSource_.SetAisacControl(index, value);
 	}
 	public static void SetAisac(string controlName, float value)
 	{
-		Current_.musicSource_.SetAisac(controlName, value);
+		Current_.musicSource_.SetAisacControl(controlName, value);
 	}
 	public static void SetGameVariable(string variableName, float value)
 	{
@@ -554,7 +554,7 @@ public class Music : MonoBehaviour
 	void Start()
 	{
 #if UNITY_EDITOR
-		UnityEditor.EditorApplication.playmodeStateChanged = OnPlaymodeStateChanged;
+		 UnityEditor.EditorApplication.pauseStateChanged += OnPlaymodeStateChanged;
 #endif
 		if( playOnStart_ )
 		{
@@ -572,11 +572,11 @@ public class Music : MonoBehaviour
 	}
 
 #if UNITY_EDITOR
-	void OnPlaymodeStateChanged()
+	void OnPlaymodeStateChanged(UnityEditor.PauseState state)
 	{
 		if( Current_.musicSource_.Player != null )
 		{
-			if( UnityEditor.EditorApplication.isPaused )
+			if ( state == UnityEditor.PauseState.Paused )
 			{
 				Pause();
 			}
